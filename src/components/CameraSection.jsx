@@ -5,6 +5,7 @@ import { TONE_CONFIG } from '../utils/config';
 function CameraSection({
   isRunning,
   onToggleCamera,
+  onCapture,
   onScanImage,
   onToneChange,
   services,
@@ -18,6 +19,7 @@ function CameraSection({
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [isFlashing, setIsFlashing] = useState(false);
 
   useEffect(() => {
     if (services.camera) {
@@ -74,6 +76,28 @@ function CameraSection({
     fileInputRef.current?.click();
   };
 
+  const handleCaptureClick = () => {
+    if (!videoRef.current || !canvasRef.current || !onCapture) return;
+
+    // Efek Kilat (Flash)
+    setIsFlashing(true);
+    setTimeout(() => setIsFlashing(false), 150);
+
+    // Ambil gambar dari video (Freeze Frame)
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const snapshot = canvas.toDataURL('image/png');
+    setPreviewImage(snapshot); // Tampilkan foto diam agar layar tidak kosong
+
+    // Jalankan deteksi
+    onCapture();
+  };
+
   const isModelReady = modelStatus === 'Model AI Siap';
   const buttonDisabled = !isModelReady;
   const buttonText = isRunning ? 'Stop Scan' : 'Mulai Scan';
@@ -109,6 +133,8 @@ function CameraSection({
             <div className="overlay-frame"></div>
           </div>
 
+          <div className={`flash-overlay ${isFlashing ? 'active' : ''}`}></div>
+
           {!isRunning && !previewImage && (
             <div className="camera-placeholder">
               <Camera size={48} />
@@ -142,7 +168,7 @@ function CameraSection({
 
           <button
             id="btn-toggle"
-            className={`capture-btn ${isRunning ? 'scanning' : ''}`}
+            className={`capture-btn ${isRunning ? 'active' : ''}`}
             onClick={() => {
               setPreviewImage(null);
               onToggleCamera(cameraType);
@@ -151,8 +177,21 @@ function CameraSection({
             aria-label={buttonText}
             style={{ opacity: buttonDisabled ? 0.6 : 1 }}
           >
-            <ScanLine size={24} />
+            <Camera size={24} />
           </button>
+
+          {isRunning && (
+            <button
+              id="btn-scan"
+              className="scan-btn pulse-anim"
+              onClick={handleCaptureClick}
+              disabled={buttonDisabled}
+              title="Tangkap & Scan"
+            >
+              <ScanLine size={24} />
+              <span>SCAN</span>
+            </button>
+          )}
         </div>
 
         <div className="settings-bar">

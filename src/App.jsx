@@ -154,14 +154,44 @@ function App() {
         isRunningRef.current = true;
         actions.setRunning(true);
         actions.setAppState('analyzing');
-        startDetectionLoop();
       } catch (err) {
         actions.setError(err.message);
       }
     }
   }, [actions, startDetectionLoop, stopCameraOnly]);
 
-  // ── 4. Image Upload handler ───────────────────────────────────────────
+  // ── 5. Manual Capture handler (Click to Scan) ──────────────────────
+  const handleCapture = useCallback(async () => {
+    const camera = cameraRef.current;
+    const detector = detectorRef.current;
+    const generator = generatorRef.current;
+    if (!camera || !detector || !generator || !camera.video) return;
+
+    try {
+      actions.setAppState('analyzing');
+      const result = await detector.predict(camera.video);
+
+      if (isValidDetection(result)) {
+        actions.setDetectionResult(result);
+        actions.setAppState('result');
+        actions.setFunFactData(null);
+        
+        // Langsung hentikan kamera setelah capture berhasil
+        stopCameraOnly();
+
+        const fact = await generator.generateFacts(result.className);
+        actions.setFunFactData(fact ?? 'error');
+      } else {
+        actions.setError('Sayuran tidak terdeteksi. Pastikan objek terlihat jelas.');
+        actions.setAppState('analyzing'); // Tetap di state menganalisis atau scan ulang
+      }
+    } catch (err) {
+      logError('handleCapture', err);
+      actions.setError('Gagal menangkap gambar.');
+    }
+  }, [actions, stopCameraOnly]);
+
+  // ── 6. Image Upload handler ───────────────────────────────────────────
   const handleScanImage = useCallback(async (imageElement) => {
     const detector = detectorRef.current;
     const generator = generatorRef.current;
@@ -230,6 +260,7 @@ function App() {
         <CameraSection
           isRunning={state.isRunning}
           onToggleCamera={handleToggleCamera}
+          onCapture={handleCapture}
           onScanImage={handleScanImage}
           onToneChange={handleToneChange}
           services={state.services}
