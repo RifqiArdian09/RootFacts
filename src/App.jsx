@@ -95,6 +95,9 @@ function App() {
               actions.setAppState('result');
               actions.setFunFactData(null); // show loading spinner
 
+              // Hentikan kamera otomatis agar hasil stabil dan mudah dibaca (Saran Reviewer)
+              handleToggleCamera();
+
               try {
                 const fact = await generator.generateFacts(result.className);
                 actions.setFunFactData(fact ?? 'error');
