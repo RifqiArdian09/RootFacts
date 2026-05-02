@@ -121,7 +121,7 @@ function App() {
   }, [actions]);
 
   // ── 3. Toggle camera on/off ───────────────────────────────────────────
-  const handleToggleCamera = useCallback(async () => {
+  const handleToggleCamera = useCallback(async (preferredCamera = 'default') => {
     const camera = cameraRef.current;
     if (!camera) return;
 
@@ -139,7 +139,7 @@ function App() {
     } else {
       // ── Start ─────────────────────────────────────────────────────────
       try {
-        await camera.startCamera();
+        await camera.startCamera(preferredCamera);
         isRunningRef.current = true;
         actions.setRunning(true);
         actions.setAppState('analyzing');
@@ -150,13 +150,45 @@ function App() {
     }
   }, [actions, startDetectionLoop]);
 
-  // ── 4. Dynamic tone handler ───────────────────────────────────────────
+  // ── 4. Image Upload handler ───────────────────────────────────────────
+  const handleScanImage = useCallback(async (imageElement) => {
+    const detector = detectorRef.current;
+    const generator = generatorRef.current;
+    if (!detector || !generator) return;
+
+    // Stop camera if running
+    if (isRunningRef.current) {
+      handleToggleCamera();
+    }
+
+    try {
+      actions.setAppState('analyzing');
+      const result = await detector.predict(imageElement);
+
+      if (isValidDetection(result)) {
+        actions.setDetectionResult(result);
+        actions.setAppState('result');
+        actions.setFunFactData(null);
+        const fact = await generator.generateFacts(result.className);
+        actions.setFunFactData(fact ?? 'error');
+      } else {
+        actions.setError('Sayuran tidak terdeteksi atau tingkat kepercayaan rendah.');
+        actions.setAppState('idle');
+      }
+    } catch (err) {
+      logError('handleScanImage', err);
+      actions.setError('Gagal memproses gambar.');
+      actions.setAppState('idle');
+    }
+  }, [actions, handleToggleCamera]);
+
+  // ── 5. Dynamic tone handler ───────────────────────────────────────────
   const handleToneChange = useCallback(
     (tone) => {
       setCurrentTone(tone);
       generatorRef.current?.setTone(tone);
       // If currently showing a result, re-generate with the new tone
-      if (state.detectionResult && isRunningRef.current) {
+      if (state.detectionResult) {
         actions.setFunFactData(null);
         generatorRef.current
           ?.generateFacts(state.detectionResult.className)
@@ -187,6 +219,7 @@ function App() {
         <CameraSection
           isRunning={state.isRunning}
           onToggleCamera={handleToggleCamera}
+          onScanImage={handleScanImage}
           onToneChange={handleToneChange}
           services={state.services}
           modelStatus={state.modelStatus}

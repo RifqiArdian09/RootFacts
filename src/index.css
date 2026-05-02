@@ -168,6 +168,20 @@ body {
   object-fit: cover;
 }
 
+.mirrored {
+  transform: scaleX(-1);
+}
+
+.preview-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 5;
+  animation: fadeIn 0.3s ease-out;
+}
+
 .camera-wrapper .hidden {
   display: none !important;
 }
@@ -181,6 +195,7 @@ body {
   justify-content: center;
   gap: 0.75rem;
   color: #666;
+  z-index: 2;
 }
 
 .camera-placeholder.hidden {
@@ -201,6 +216,7 @@ body {
   inset: 0;
   display: none;
   pointer-events: none;
+  z-index: 10;
 }
 
 .camera-overlay.active {
@@ -218,9 +234,41 @@ body {
 .camera-controls {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 1rem;
   margin-top: -1.5rem;
   position: relative;
   z-index: 10;
+}
+
+.secondary-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  background: var(--bg-surface);
+  color: var(--primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  box-shadow: var(--shadow-md);
+}
+
+.secondary-btn:hover:not(:disabled) {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.secondary-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.secondary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .capture-btn {
@@ -606,22 +654,43 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 @media (min-width: 768px) {
   #root {
-    max-width: 440px;
-    margin: 1.5rem auto;
-    min-height: calc(100vh - 3rem);
+    max-width: 960px;
+    margin: 2.5rem auto;
+    min-height: auto;
     border-radius: var(--radius-lg);
+    overflow: hidden;
   }
 
   .main-content {
-    padding: 1.5rem;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 2rem;
+    padding: 2rem;
+  }
+
+  .camera-section {
+    flex: 1.2;
+    min-width: 0;
+  }
+
+  .results-section {
+    flex: 1;
+    min-width: 0;
+    position: sticky;
+    top: 6rem;
   }
 
   .camera-wrapper {
-    aspect-ratio: 16/10;
+    aspect-ratio: 4/3;
   }
 
+  .secondary-btn,
   .capture-btn {
-    width: 64px;
-    height: 64px;
+    width: 68px;
+    height: 68px;
+  }
+
+  .settings-bar {
+    padding: 1rem;
   }
 }

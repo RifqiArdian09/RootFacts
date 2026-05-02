@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Mic, ScanLine } from 'lucide-react';
+import { Camera, Mic, ScanLine, Image as ImageIcon, Upload } from 'lucide-react';
 import { TONE_CONFIG } from '../utils/config';
 
 function CameraSection({
   isRunning,
   onToggleCamera,
+  onScanImage,
   onToneChange,
   services,
   modelStatus,
@@ -15,6 +16,8 @@ function CameraSection({
   const [cameraType, setCameraType] = useState('default');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   useEffect(() => {
     if (services.camera) {
@@ -36,7 +39,7 @@ function CameraSection({
   const handleCameraChange = (newCameraType) => {
     setCameraType(newCameraType);
     if (services.camera && services.camera.isActive()) {
-      services.camera.startCamera();
+      services.camera.startCamera(newCameraType);
     }
   };
 
@@ -49,6 +52,26 @@ function CameraSection({
     if (onToneChange) {
       onToneChange(newTone);
     }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        setPreviewImage(event.target.result);
+        onScanImage(img);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerUpload = () => {
+    fileInputRef.current?.click();
   };
 
   const isModelReady = modelStatus === 'Model AI Siap';
@@ -65,7 +88,7 @@ function CameraSection({
             autoPlay
             muted
             playsInline
-            className={isRunning ? '' : 'hidden'}
+            className={`${isRunning ? '' : 'hidden'} ${cameraType === 'front' ? 'mirrored' : ''}`}
           />
 
           <canvas
@@ -74,11 +97,19 @@ function CameraSection({
             className="hidden"
           />
 
+          {previewImage && !isRunning && (
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="preview-image"
+            />
+          )}
+
           <div className={`camera-overlay ${isRunning ? 'active' : ''}`}>
             <div className="overlay-frame"></div>
           </div>
 
-          {!isRunning && (
+          {!isRunning && !previewImage && (
             <div className="camera-placeholder">
               <Camera size={48} />
               <p>Kamera tidak aktif</p>
@@ -92,10 +123,30 @@ function CameraSection({
         </div>
 
         <div className="camera-controls">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+          
+          <button
+            className="secondary-btn"
+            onClick={triggerUpload}
+            disabled={buttonDisabled}
+            title="Upload Gambar"
+          >
+            <Upload size={20} />
+          </button>
+
           <button
             id="btn-toggle"
             className={`capture-btn ${isRunning ? 'scanning' : ''}`}
-            onClick={onToggleCamera}
+            onClick={() => {
+              setPreviewImage(null);
+              onToggleCamera(cameraType);
+            }}
             disabled={buttonDisabled}
             aria-label={buttonText}
             style={{ opacity: buttonDisabled ? 0.6 : 1 }}
