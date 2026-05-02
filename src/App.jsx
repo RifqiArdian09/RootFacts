@@ -96,7 +96,7 @@ function App() {
               actions.setFunFactData(null); // show loading spinner
 
               // Hentikan kamera otomatis agar hasil stabil dan mudah dibaca (Saran Reviewer)
-              handleToggleCamera();
+              stopCameraOnly();
 
               try {
                 const fact = await generator.generateFacts(result.className);
@@ -123,24 +123,32 @@ function App() {
     detectionLoopRef.current = requestAnimationFrame(loop);
   }, [actions]);
 
-  // ── 3. Toggle camera on/off ───────────────────────────────────────────
+  // ── 3. Stop camera without resetting results (for auto-stop) ─────────
+  const stopCameraOnly = useCallback(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+
+    isRunningRef.current = false;
+    if (detectionLoopRef.current) {
+      cancelAnimationFrame(detectionLoopRef.current);
+      detectionLoopRef.current = null;
+    }
+    camera.stopCamera();
+    actions.setRunning(false);
+  }, [actions]);
+
+  // ── 4. Toggle camera on/off (manual) ──────────────────────────────────
   const handleToggleCamera = useCallback(async (preferredCamera = 'default') => {
     const camera = cameraRef.current;
     if (!camera) return;
 
     if (isRunningRef.current) {
-      // ── Stop ──────────────────────────────────────────────────────────
-      isRunningRef.current = false;
-      if (detectionLoopRef.current) {
-        cancelAnimationFrame(detectionLoopRef.current);
-        detectionLoopRef.current = null;
-      }
-      camera.stopCamera();
+      // ── Stop (Manual) ──
+      stopCameraOnly();
       lastDetectedRef.current = null;
-      actions.setRunning(false);
       actions.resetResults();
     } else {
-      // ── Start ─────────────────────────────────────────────────────────
+      // ── Start ──
       try {
         await camera.startCamera(preferredCamera);
         isRunningRef.current = true;
@@ -151,7 +159,7 @@ function App() {
         actions.setError(err.message);
       }
     }
-  }, [actions, startDetectionLoop]);
+  }, [actions, startDetectionLoop, stopCameraOnly]);
 
   // ── 4. Image Upload handler ───────────────────────────────────────────
   const handleScanImage = useCallback(async (imageElement) => {
